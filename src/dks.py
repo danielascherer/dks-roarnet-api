@@ -9,7 +9,6 @@ from logging import getLogger
 import time
 from typing import Optional, Protocol, Self, TextIO, TypeVar, final
 
-#from numpy import indices
 
 from roar_net_api.operations import (
     SupportsApplyMove,
@@ -30,8 +29,8 @@ from roar_net_api.operations import (
 
 log = getLogger(__name__)
 
-# ------------------------------ Solution --------------------------------------
 
+# ------------------------------ Solution --------------------------------------
 @final
 class Solution(SupportsCopySolution, 
                SupportsObjectiveValue, 
@@ -40,53 +39,85 @@ class Solution(SupportsCopySolution,
     def __init__(
             self, 
             problem: Problem, 
-            used: list[int], 
-            unused: list[int], 
-            num_edges_in_used: int, 
-            #num_missing_vertices: int, 
-            num_neighbours_in_used: list[int], 
+            used: set[int], 
+            unused: set[int], 
             lb: int,
     ):
         self.problem = problem
-        self.used = used # set of used vertices 
-        self.unused = unused # set of unused vertices
-        #self.num_missing_vertices = num_missing_vertices # number of remaining vertices we still need to add to reach k
-        self.num_edges_in_used = num_edges_in_used  # |E(S)|
-        self.num_neighbours_in_used = num_neighbours_in_used  # neighbours of u already inside used (u \in unused)
-        self.lb = lb # lower bound
+        self.used    = used # set of used vertices 
+        self.unused  = unused # set of unused vertices
+        self.lb      = lb # lower bound
+        self.obj     = 0
 
     def __str__(self) -> str:
         '''
         Return the vertices in "used" as a space-separated string, sorted and converted to 1-based ids
         '''
-        return " ".join(str(v+1) for v in sorted(self.used))
-
+        return "used: " + " ".join(str(v) for v in sorted(self.used)) + "\nunused: " + " ".join(str(v) for v in sorted(self.unused))
     
     def to_textio(self, f: TextIO) -> None:
-        # According to the DKS solution format (output.mtx)
         k = self.problem.k
         f.write(f"{k}\n{self.num_edges_in_used}\n")
-        f.write(str(self)) # print solution
+        f.write(str(self))
         f.write("\n")
 
-    
+    @property
+    def is_feasible(self) -> bool:
+        return len(self.used) == self.problem.k
+
+    def copy_solution(self) -> Self:
+        return self.__class__(self.problem, self.used.copy(), self.unused.copy(), self.lb)
+
+    def objective_value(self) -> Optional[int]:
+        if self.is_feasible:
+            return -self.obj
+            return self.lb
+        return None
+
+    def lower_bound(self) -> int:
+        return self.lb
+
 
 # ------------------------------ Moves ------------------------
+@final
+class AddMove(SupportsApplyMove[Solution], SupportsLowerBoundIncrement[Solution]):
+    def __init__(self, neighbourhood: AddNeighbourhood, v: int):
+        self.neighbourhood = neighbourhood
+        self.v = v 
 
-'''@final
-class AddMove(
-    SupportsApplyMove[Solution], 
-    SupportsLowerBoundIncrement[Solution],
-    SupportsObjectiveValueIncrement[Solution],
-    ):
-    def _init__():
-'''
+    def __str__(self) -> str:
+        return str(self.v)
+
+    def apply_move(self, solution: Solution) -> Solution:
+        solution.obj += self._obj_incr(solution)
+        solution.used.add(self.v)
+        solution.unused.remove(self.v)
+        return solution
+
+    def _obj_incr(self, solution: Solution) -> float:
+        incr = 0
+        for u in solution.used:
+            if u in solution.problem.adj[self.v]:
+                incr += 1
+        return -incr
+
+    def lower_bound_increment(self, solution: Solution) -> float:
+        return self._obj_incr(solution)
+
 
 # ------------------------------- Neighbourhood ------------------------------
+@final
+class AddNeighbourhood(SupportsMoves[Solution, AddMove]):
+    def __init__(self, problem: Problem):
+        self.problem = problem
+
+    def moves(self, solution: Solution) -> Iterable[AddMove]:
+        if len(solution.used) < self.problem.k:
+            for i in solution.unused:
+                yield AddMove(self, i)
 
 
 # ------------------------------ Problem --------------------------------------
-
 @final
 class Problem(
     #SupportsLocalNeighbourhood[LocalNeighbourhood],
@@ -96,8 +127,9 @@ class Problem(
         self.name = name
         self.n = n
         self.k = k
-        # adjacency as 0..n-1
-        adj = [set() for _ in range(n)] # list of n empty sets
+        self.c_nbhood: Optional[AddNeighbourhood] = None
+
+        adj = [set() for _ in range(n)]   # adjacency list
         for u, v in edges:
             if u == v:
                 continue
@@ -107,9 +139,6 @@ class Problem(
             adj[u].add(v)
             adj[v].add(u)
         self.adj: list[set[int]] = adj
-
-         
-
 
     @classmethod
     def from_textio(cls, f: TextIO, k: int | None = None, name: str = "dks") -> "Problem":
@@ -130,32 +159,49 @@ class Problem(
         # Read edges (1-based ids)
         edges_1based: list[tuple[int, int]] = []
         for line in f:
-            s = line.strip() # Removes whitespace from the line.
+            s = line.strip()   # Removes whitespace from the line.
             if not s or s.startswith("%"):
                 continue
             a, b = s.split()
             u, v = int(a), int(b)
-            if u == v: # skip self-loops                
+            if u == v:         # skip self-loops                
                 continue            
             edges_1based.append((u, v))
     
-        return cls(n=n, edges=edges_1based, k=k, name=name) #return a new instance of Problem
+        return cls(n=n, edges=edges_1based, k=k, name=name)   # return a new instance of Problem
 
+    def construction_neighbourhood(self) -> AddNeighbourhood:
+        if self.c_nbhood is None:
+            self.c_nbhood = AddNeighbourhood(self)
+        return self.c_nbhood
+
+    def empty_solution(self) -> Solution:
+        return Solution(self, used=set(), unused=set(range(self.n)), lb=0)
 
 
 
 # ============================== Testing ===================================
-
 if __name__ == "__main__":
     import roar_net_api.algorithms as alg
     logging.basicConfig(stream=sys.stderr, level="INFO", format="%(levelname)s;%(asctime)s;%(message)s")
+
     prob = Problem.from_textio(sys.stdin)     
         
     log.info(f"Instance: name={prob.name}, n={prob.n}, k={prob.k}")
     log.info(f"Adjacency: {prob.adj}")
+
+    solution = alg.greedy_construction(prob)
+    print(solution)
+    log.info(f"Objective value after constructive search: {solution.objective_value()}")
+
+
+    # s = prob.empty_solution()
+    # print(s)
+
+    # neigh = prob.construction_neighbourhood()
+    # for n in neigh.moves(s):
+    #     print(n)
     
     
 
-    
-    
     
