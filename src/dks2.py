@@ -42,11 +42,13 @@ class Solution(SupportsCopySolution,
             used: set[int], 
             unused: set[int], 
             lb: int,
+            curr_degree: int,
     ):
         self.problem = problem
         self.used    = used # set of used vertices 
         self.unused  = unused # set of unused vertices
         self.lb      = lb # lower bound
+        self.curr_degree = curr_degree
 
     def __str__(self) -> str:
         '''
@@ -65,7 +67,7 @@ class Solution(SupportsCopySolution,
         return len(self.used) == self.problem.k
 
     def copy_solution(self) -> Self:
-        return self.__class__(self.problem, self.used.copy(), self.unused.copy(), self.lb)
+        return self.__class__(self.problem, self.used.copy(), self.unused.copy(), self.lb, self.curr_degree)
 
     def objective_value(self) -> Optional[int]:
         if self.is_feasible:
@@ -88,16 +90,17 @@ class AddMove(SupportsApplyMove[Solution], SupportsLowerBoundIncrement[Solution]
 
     def apply_move(self, solution: Solution) -> Solution:
         solution.lb += self._lb_incr(solution)
+        solution.curr_degree += solution.problem.adj[self.v[0]]
         solution.used.add(self.v)
         solution.unused.remove(self.v)
         return solution
 
-    def _lb_incr(self, solution: Solution) -> float:
-        incr = 0
-        for u in solution.used:
-            if u in solution.problem.adj[self.v]:
-                incr += 1
-        return -incr
+    # def _lb_incr(self, solution: Solution) -> float:
+    #     incr = 0
+    #     for u in solution.used:
+    #         if u in solution.problem.adj[self.v[0]]:
+    #             incr += 1
+    #     return -incr
 
     def lower_bound_increment(self, solution: Solution) -> float:
         return self._lb_incr(solution)
@@ -154,7 +157,7 @@ class Problem(
         parts = header.split()
         k, n, _m = map(int, parts)        
     
-        # Read edges (1-based ids)
+        # Read edges (1-based ids)    solution = alg.beam_search(prob)
         edges_1based: list[tuple[int, int]] = []
         for line in f:
             s = line.strip()   # Removes whitespace from the line.
@@ -174,8 +177,24 @@ class Problem(
         return self.c_nbhood
 
     def empty_solution(self) -> Solution:
-        return Solution(self, used=set(), unused=set(range(self.n)), lb=0)
+        degrees = [(i, min(len(self.adj[i]), self.k-1)) for i in range(len(self.adj))]
+        degrees.sort(key=lambda i: i[1], reverse=True)
 
+        return Solution(self, used=set(), unused=degrees, lb=-sum([u[1] for u in degrees[:self.k]]) / 2, curr_degree=0)
+
+    # def random_solution(self) -> Solution:
+    #     lb = 0
+    #     c = list(range(self.n))
+    #     random.shuffle(c)
+    #     used = c[:self.k]
+    #     unused = c[self.k:]
+
+    #     for u in used:
+    #         for v in used:
+    #             if u in self.adj[v]:
+    #                 lb += 1
+    #     print("lb: ", -lb//2)
+    #     return Solution(self, used=used, unused=unused, lb=-lb//2, curr_degree=self.k)
 
 
 # ============================== Testing ===================================
@@ -185,18 +204,34 @@ if __name__ == "__main__":
 
     prob = Problem.from_textio(sys.stdin)     
         
-    # log.info(f"Instance: name={prob.name}, n={prob.n}, k={prob.k}")
-    # log.info(f"Adjacency: {prob.adj}")
+    log.info(f"Instance: name={prob.name}, n={prob.n}, k={prob.k}")
+    log.info(f"Adjacency: {prob.adj}")
 
+    # sol = prob.empty_solution()
+    # print(sol.lb)
     
     print("\nRunning GREEDY...\n")
     solution = alg.greedy_construction(prob)
     log.info(f"Objective value after constructive search: {-solution.objective_value()}")
 
-    print("\nRunning BEAM search...\n")
-    solution = alg.beam_search(prob)
-    log.info(f"Objective value after constructive search: {-solution.objective_value()}")
+    # print("\nRunning BEAM search...\n")
+    # solution = alg.beam_search(prob)
+    # # print(solution)
+    # log.info(f"Objective value after constructive search: {-solution.objective_value()}")
 
-    print("\nRunning GRASP...\n")
-    solution = alg.grasp(prob, 10)
-    log.info(f"Objective value after constructive search: {-solution.objective_value()}")
+    # print("\nRunning GRASP...\n")
+    # solution = alg.grasp(prob, 10)
+    # # print(solution)
+    # log.info(f"Objective value after constructive search: {-solution.objective_value()}")
+
+
+    # s = prob.empty_solution()
+    # print(s)
+
+    # neigh = prob.construction_neighbourhood()
+    # for n in neigh.moves(s):
+    #     print(n)
+    
+    
+
+    
