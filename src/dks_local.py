@@ -67,14 +67,6 @@ class Solution(SupportsCopySolution,
     def copy_solution(self) -> Self:
         return self.__class__(self.problem, self.used.copy(), self.unused.copy(), self.lb)
 
-    def my_value(self):
-        total = 0
-        for u in self.used:
-            for v in self.used:
-                if u in self.problem.adj[v]:
-                    total += 1
-        return total // 2
-
     def objective_value(self) -> Optional[int]:
         if self.is_feasible:
             return self.lb
@@ -95,49 +87,21 @@ class AddMove(SupportsApplyMove[Solution], SupportsLowerBoundIncrement[Solution]
         return str(self.v)
 
     def apply_move(self, solution: Solution) -> Solution:
-        solution.lb += self.lower_bound_increment(solution)
+        solution.lb += self._lb_incr(solution)
         solution.used.add(self.v)
         solution.unused.remove(self.v)
         return solution
 
-    def _degree_of_used_vertex(self, w, used, solution):
-        Gi = 0
-        for u in used:
-            if u in solution.problem.adj[w]:
-                Gi += 1
-        Ge = len(solution.problem.adj[w]) - Gi
-        k = solution.problem.k
-        j = len(used)
-        return (min(Ge, k-j) + Gi)
-
-    def _degree_of_unused_vertex(self, w, used, solution):
-        Gi = 0
-        for u in used:
-            if u in solution.problem.adj[w]:
-                Gi += 1
-        Ge = len(solution.problem.adj[w]) - Gi
-        k = solution.problem.k
-        j = len(used)
-        return (min(Ge, k-j-1) + Gi)
+    def _lb_incr(self, solution: Solution) -> float:
+        incr = 0
+        for u in solution.used:
+            if u in solution.problem.adj[self.v]:
+                incr += 1
+        return -incr
 
     def lower_bound_increment(self, solution: Solution) -> float:
-        used   = list(solution.used)
-        used.append(self.v)
-        unused = list(solution.unused)
-        unused.remove(self.v)
+        return self._lb_incr(solution)
 
-        lb = 0
-        for u in used:
-            lb += self._degree_of_used_vertex(u, used, solution)
-
-        aux = []
-        for u in unused:
-            aux.append(self._degree_of_unused_vertex(u, used, solution))
-
-        aux.sort(reverse=True)
-        total = solution.problem.k - len(used) # - 1
-        return -((sum(aux[:total]) + lb) // 2 + solution.lb)
-            
 
 # ------------------------------- Neighbourhood ------------------------------
 @final
@@ -210,13 +174,7 @@ class Problem(
         return self.c_nbhood
 
     def empty_solution(self) -> Solution:
-        outter_degree = [min(len(self.adj[i]), self.k-1) for i in range(len(self.adj))]
-
-        aux = list(outter_degree)
-        aux.sort(reverse=True)
-        lb = sum(aux[:self.k]) // 2
-
-        return Solution(self, used=set(), unused=set(range(self.n)), lb=-lb)
+        return Solution(self, used=set(), unused=set(range(self.n)), lb=0)
 
 
 
@@ -234,15 +192,11 @@ if __name__ == "__main__":
     print("\nRunning GREEDY...\n")
     solution = alg.greedy_construction(prob)
     log.info(f"Objective value after constructive search: {-solution.objective_value()}")
-    print(solution.my_value())
 
     print("\nRunning BEAM search...\n")
     solution = alg.beam_search(prob)
     log.info(f"Objective value after constructive search: {-solution.objective_value()}")
-    print(solution.my_value())
 
     print("\nRunning GRASP...\n")
     solution = alg.grasp(prob, 10)
     log.info(f"Objective value after constructive search: {-solution.objective_value()}")
-    print(solution.my_value())
-
