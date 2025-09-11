@@ -1,4 +1,22 @@
-%%graph Harvard500.mtx -made undirected and simple by ignoring the direction of the arcs and removing self-loops and multiple edges
+%%MatrixMarket matrix coordinate pattern general
+%-------------------------------------------------------------------------------
+% UF Sparse Matrix Collection, Tim Davis
+% http://www.cise.ufl.edu/research/sparse/matrices/MathWorks/Harvard500
+% name: MathWorks/Harvard500
+% [Web matrix (Numerical Computing with MATLAB, Moler, 2004)]
+% id: 1172
+% date: 2002
+% author: C. Moler
+% ed: T. Davis
+% fields: name title A id kind aux date author ed
+% aux: nodename
+% kind: directed graph
+%-------------------------------------------------------------------------------
+%-------------------------------------------------------------------------------
+% Modifications (this version):
+% - Made undirected and simple by ignoring arc directions
+% - Removed self-loops and multiple edges
+%-------------------------------------------------------------------------------
 18 500 2116
 2 1
 2 28

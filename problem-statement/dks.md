@@ -6,9 +6,9 @@ SPDX-License-Identifier: CC-BY-4.0
 
 # Densest k-Subgraph Problem
 
-Daniela Scherer dos Santos and Luís Paquete, University of Coimbra, CISUC/LASI, DEI, Coimbra, Portugal  
+Daniela Scherer dos Santos, Luís Paquete, Felipe Mota, Miguel Rabuge, and João Moreira, University of Coimbra, CISUC/LASI, DEI, Coimbra, Portugal  
 
-Copyright 2025 Daniela Scherer dos Santos and Luís Paquete
+Copyright 2025 Daniela Scherer dos Santos, Luís Paquete, Felipe Mota, Miguel Rabuge, and João Moreira.
 
 This document is licensed under CC-BY-4.0.
 
