@@ -1,4 +1,37 @@
-%%Largest component of the graph California.mtx
+%%MatrixMarket matrix coordinate pattern general
+%-------------------------------------------------------------------------------
+% UF Sparse Matrix Collection, Tim Davis
+% http://www.cise.ufl.edu/research/sparse/matrices/Pajek/California
+% name: Pajek/California
+% [Pajek network: Kleinberg's web search of "California"]
+% id: 1456
+% date: 2006
+% author: J. Kleinberg
+% ed: V. Batagelj
+% fields: name title A id kind notes aux date author ed
+% aux: nodename
+% kind: directed graph
+%-------------------------------------------------------------------------------
+% notes:
+% ------------------------------------------------------------------------------
+% Pajek network converted to sparse adjacency matrix for inclusion in UF sparse 
+% matrix collection, Tim Davis.  For Pajek datasets, See V. Batagelj & A. Mrvar,
+% http://vlado.fmf.uni-lj.si/pub/networks/data/.                                
+% ------------------------------------------------------------------------------
+%  California - Pages matching the query "California".                          
+%  This graph was constructed by expanding a 200-page response set to           
+%  a search engine query 'California', as in the hub/authority algorithm.       
+%  from Jon Kleinberg:                                                          
+%    http://www.cs.cornell.edu/courses/cs685/2002fa/                            
+%  adapted for Pajek, V. Batagelj, March 19, 2006                               
+%    0 -> 9664                                                                  
+%-------------------------------------------------------------------------------
+%-------------------------------------------------------------------------------
+% Modifications (this version):
+% - Made undirected and simple by ignoring arc directions
+% - Removed self-loops and multiple edges
+% - Largest component of the original graph California.mtx
+%-------------------------------------------------------------------------------
 25 5925 15770
 348 1
 348 5925

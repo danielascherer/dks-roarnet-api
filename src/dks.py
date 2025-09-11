@@ -307,46 +307,42 @@ if __name__ == "__main__":
         
     # log.info(f"Instance: name={prob.name}, n={prob.n}, k={prob.k}")
     # log.info(f"Adjacency: {prob.adj}")
-
     
-    # print("\nRunning GREEDY...\n")
-    # solution = alg.greedy_construction(prob)
-    # log.info(f"Objective value after constructive search: {-solution.objective_value()}")
-    # print(solution.my_value())
+    #print("\nRunning GREEDY...\n")
+    #solution = alg.greedy_construction(prob)
+    #log.info(f"Objective value after GREEDY: {-solution.objective_value()}")
+    #print(solution.my_value())
 
     # print("\nRunning BEAM search...\n")
     # solution = alg.beam_search(prob)
-    # log.info(f"Objective value after constructive search: {-solution.objective_value()}")
+    # log.info(f"Objective value after Bean Search: {-solution.objective_value()}")
     # print(solution.my_value())
 
-    # print("\nRunning GRASP...\n")
-    # solution = alg.grasp(prob, 10)
-    # log.info(f"Objective value after constructive search: {-solution.objective_value()}")
-    # print(solution.my_value())
+    #print("\nRunning GRASP...\n")
+    solution = alg.grasp(prob, 10)
+    log.info(f"Objective value after GRASP: {-solution.objective_value()}")
+    #print(solution.my_value())
 
-    # solution = alg.best_improvement(prob, solution)
-    # log.info(f"Objective value after constructive search: {-solution.objective_value()}")
-    # print(solution.my_value())
-
+    
     # solution = alg.first_improvement(prob, solution)
-    # log.info(f"Objective value after constructive search: {-solution.objective_value()}")
+    # log.info(f"Objective value after First Improvement: {-solution.objective_value()}")
     # print(solution.my_value())
 
-    print("\nRunning RANDOM...\n")
-    solution = prob.random_solution()
-    log.info(f"Objective of random solution: {-solution.objective_value()}")
-    print(solution.my_value())
+    #print("\nRunning RANDOM...\n")
+    #solution = prob.random_solution()
+    #log.info(f"Objective of random solution: {-solution.objective_value()}")
+    #print(solution.my_value())
 
     solution = alg.best_improvement(prob, solution)
-    log.info(f"Objective value after local search: {-solution.objective_value()}")
+    log.info(f"Objective value after Best Improvement: {-solution.objective_value()}")
     # print(solution.my_value())
 
-    solution = alg.rls(prob, solution, 10)
-    log.info(f"Objective value after local search: {-solution.objective_value()}")
-    # print(solution.my_value())
+    #solution = alg.rls(prob, solution, 10)
+    #log.info(f"Objective value after RLS: {-solution.objective_value()}")
+    ## print(solution.my_value())
 
-    # solution = alg.sa(prob, solution, 120, 50)
-    # log.info(f"Objective value after constructive search: {-solution.objective_value()}")
-    # print(solution.my_value())
+    solution = alg.sa(prob, solution, 30, 30)
+    log.info(f"Objective value after SA: {-solution.objective_value()}")
+    #print(solution.my_value())
 
     solution.to_textio(sys.stdout)
