@@ -47,7 +47,6 @@ class Solution(SupportsCopySolution,
         self.used    = used # set of used vertices 
         self.unused  = unused # set of unused vertices
         self.lb      = lb # lower bound
-        self.obj     = 0
 
     def __str__(self) -> str:
         '''
@@ -57,8 +56,11 @@ class Solution(SupportsCopySolution,
     
     def to_textio(self, f: TextIO) -> None:
         k = self.problem.k
-        f.write(f"{k}\n{self.num_edges_in_used}\n")
-        f.write(str(self))
+        f.write(str(k))
+        f.write("\n")
+        f.write(str(self.my_value()))
+        f.write("\n")
+        f.write(" ".join(str(v) for v in sorted(self.used)))
         f.write("\n")
 
     @property
@@ -68,9 +70,16 @@ class Solution(SupportsCopySolution,
     def copy_solution(self) -> Self:
         return self.__class__(self.problem, self.used.copy(), self.unused.copy(), self.lb)
 
+    def my_value(self):
+        total = 0
+        for u in self.used:
+            for v in self.used:
+                if u in self.problem.adj[v]:
+                    total += 1
+        return total // 2
+
     def objective_value(self) -> Optional[int]:
         if self.is_feasible:
-            return -self.obj
             return self.lb
         return None
 
@@ -89,20 +98,79 @@ class AddMove(SupportsApplyMove[Solution], SupportsLowerBoundIncrement[Solution]
         return str(self.v)
 
     def apply_move(self, solution: Solution) -> Solution:
-        solution.obj += self._obj_incr(solution)
+        solution.lb += self.lower_bound_increment(solution)
         solution.used.add(self.v)
         solution.unused.remove(self.v)
         return solution
 
-    def _obj_incr(self, solution: Solution) -> float:
-        incr = 0
-        for u in solution.used:
-            if u in solution.problem.adj[self.v]:
-                incr += 1
-        return -incr
+    def _degree_of_used_vertex(self, w, used, solution):
+        Gi = 0
+        for u in used:
+            if u in solution.problem.adj[w]:
+                Gi += 1
+        Ge = len(solution.problem.adj[w]) - Gi
+        k = solution.problem.k
+        j = len(used)
+        return (min(Ge, k-j) + Gi)
+
+    def _degree_of_unused_vertex(self, w, used, solution):
+        Gi = 0
+        for u in used:
+            if u in solution.problem.adj[w]:
+                Gi += 1
+        Ge = len(solution.problem.adj[w]) - Gi
+        k = solution.problem.k
+        j = len(used)
+        return (min(Ge, k-j-1) + Gi)
 
     def lower_bound_increment(self, solution: Solution) -> float:
-        return self._obj_incr(solution)
+        used   = list(solution.used)
+        used.append(self.v)
+        unused = list(solution.unused)
+        unused.remove(self.v)
+
+        lb = 0
+        for u in used:
+            lb += self._degree_of_used_vertex(u, used, solution)
+
+        aux = []
+        for u in unused:
+            aux.append(self._degree_of_unused_vertex(u, used, solution))
+
+        aux.sort(reverse=True)
+        total = solution.problem.k - len(used) # - 1
+        return -((sum(aux[:total]) + lb) // 2 + solution.lb)
+          
+  
+@final
+class SwapMove(SupportsApplyMove[Solution], SupportsObjectiveValueIncrement[Solution]):
+    def __init__(self, neighbourhood: SwapNeighbourhood, u: int, v: int):
+        self.neighbourhood = neighbourhood
+        self.u = u  # removed node
+        self.v = v  # inserted node
+
+    def apply_move(self, solution: Solution) -> Solution:
+        solution.lb += self.objective_value_increment(solution)
+
+        solution.used.add(self.v)
+        solution.unused.remove(self.v)
+
+        solution.used.remove(self.u)
+        solution.unused.add(self.u)
+
+        return solution
+
+    def objective_value_increment(self, solution: Solution) -> float:
+        incr = 0
+        for u in solution.used:
+            if self.u in solution.problem.adj[u]:
+                incr -= 1
+
+        for v in solution.used:
+            if v != self.u and self.v in solution.problem.adj[v]:
+                incr += 1
+
+        return -incr
 
 
 # ------------------------------- Neighbourhood ------------------------------
@@ -117,6 +185,30 @@ class AddNeighbourhood(SupportsMoves[Solution, AddMove]):
                 yield AddMove(self, i)
 
 
+@final
+class SwapNeighbourhood(
+    SupportsMoves[Solution, SwapMove],
+    SupportsRandomMovesWithoutReplacement[Solution, SwapMove],
+    SupportsRandomMove[Solution, SwapMove],
+):
+    def __init__(self, problem: Problem):
+        self.problem = problem
+
+    def moves(self, solution: Solution) -> Iterable[SwapMove]:
+        for u in solution.used:
+            for v in solution.unused:
+                yield SwapMove(self, u, v)
+
+    def random_moves_without_replacement(self, solution: Solution) -> Iterable[SwapMove]:
+        c = list(self.moves(solution))
+        random.shuffle(c)
+        for move in c:
+            yield move
+
+    def random_move(self, solution: Solution) -> Optional[SwapMove]:
+        return next(list(self.random_moves_without_replacement(solution)))
+
+
 # ------------------------------ Problem --------------------------------------
 @final
 class Problem(
@@ -127,7 +219,8 @@ class Problem(
         self.name = name
         self.n = n
         self.k = k
-        self.c_nbhood: Optional[AddNeighbourhood] = None
+        self.c_nbhood = None
+        self.l_nbhood = None
 
         adj = [set() for _ in range(n)]   # adjacency list
         for u, v in edges:
@@ -175,8 +268,33 @@ class Problem(
             self.c_nbhood = AddNeighbourhood(self)
         return self.c_nbhood
 
+    def local_neighbourhood(self) -> SwapNeighbourhood:
+        if self.l_nbhood is None:
+            self.l_nbhood = SwapNeighbourhood(self)
+        return self.l_nbhood
+
     def empty_solution(self) -> Solution:
-        return Solution(self, used=set(), unused=set(range(self.n)), lb=0)
+        outter_degree = [min(len(self.adj[i]), self.k-1) for i in range(len(self.adj))]
+
+        aux = list(outter_degree)
+        aux.sort(reverse=True)
+        lb = sum(aux[:self.k]) // 2
+
+        return Solution(self, used=set(), unused=set(range(self.n)), lb=-lb)
+
+    def random_solution(self) -> Solution:
+        nodes = list(range(len(self.adj)))
+        random.shuffle(nodes)
+        used = nodes[:self.k]
+        unused = nodes[self.k:]
+
+        lb = 0
+        for u in used:
+            for v in used:
+                if v in self.adj[u]:
+                    lb += 1
+
+        return Solution(self, used=set(used), unused=set(unused), lb=-lb//2)
 
 
 
@@ -187,21 +305,48 @@ if __name__ == "__main__":
 
     prob = Problem.from_textio(sys.stdin)     
         
-    log.info(f"Instance: name={prob.name}, n={prob.n}, k={prob.k}")
-    log.info(f"Adjacency: {prob.adj}")
-
-    solution = alg.greedy_construction(prob)
-    print(solution)
-    log.info(f"Objective value after constructive search: {solution.objective_value()}")
-
-
-    # s = prob.empty_solution()
-    # print(s)
-
-    # neigh = prob.construction_neighbourhood()
-    # for n in neigh.moves(s):
-    #     print(n)
-    
-    
+    # log.info(f"Instance: name={prob.name}, n={prob.n}, k={prob.k}")
+    # log.info(f"Adjacency: {prob.adj}")
 
     
+    # print("\nRunning GREEDY...\n")
+    # solution = alg.greedy_construction(prob)
+    # log.info(f"Objective value after constructive search: {-solution.objective_value()}")
+    # print(solution.my_value())
+
+    # print("\nRunning BEAM search...\n")
+    # solution = alg.beam_search(prob)
+    # log.info(f"Objective value after constructive search: {-solution.objective_value()}")
+    # print(solution.my_value())
+
+    # print("\nRunning GRASP...\n")
+    # solution = alg.grasp(prob, 10)
+    # log.info(f"Objective value after constructive search: {-solution.objective_value()}")
+    # print(solution.my_value())
+
+    # solution = alg.best_improvement(prob, solution)
+    # log.info(f"Objective value after constructive search: {-solution.objective_value()}")
+    # print(solution.my_value())
+
+    # solution = alg.first_improvement(prob, solution)
+    # log.info(f"Objective value after constructive search: {-solution.objective_value()}")
+    # print(solution.my_value())
+
+    print("\nRunning RANDOM...\n")
+    solution = prob.random_solution()
+    log.info(f"Objective of random solution: {-solution.objective_value()}")
+    print(solution.my_value())
+
+    solution = alg.best_improvement(prob, solution)
+    log.info(f"Objective value after local search: {-solution.objective_value()}")
+    # print(solution.my_value())
+
+    solution = alg.rls(prob, solution, 10)
+    log.info(f"Objective value after local search: {-solution.objective_value()}")
+    # print(solution.my_value())
+
+    # solution = alg.sa(prob, solution, 120, 50)
+    # log.info(f"Objective value after constructive search: {-solution.objective_value()}")
+    # print(solution.my_value())
+
+    solution.to_textio(sys.stdout)
