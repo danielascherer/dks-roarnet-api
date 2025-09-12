@@ -39,15 +39,16 @@ roar-net-api/
    ```bash
    git clone https://github.com/danielascherer/dks-roarnet-api.git
    cd roar-net-api/src
+   ```
     
 2. Install dependencies (requires Python ≥ 3.11):
     ```bash
     pip install -r requirements.txt
-
+    ```
 3. Run an example:
    ```bash
    python dks.py < ../data/input.mtx >> output.mtx
-
+   ```
 ---
 
 ## Upper Bound on the Number of Edges
@@ -55,18 +56,21 @@ roar-net-api/
 Given an undirected graph $G=(V,E)$, where $V$ is the set of vertices and $E$ is the set of edges, let $S=(V_S, E_S)$ be a subgraph of $G$, with $V_S \subseteq V$ and $E_S \subseteq E$.
 Our implementation applies a degree-based upper bound calculated as follows. 
 
-$$ub = \sum_{v \in S} d_b(v) + \sum_{i=1}^{k - |V_S|} D_i$$
+```math
+ub = \frac{1}{2}\left(\sum_{v \in S} d_b(v) \;\;+\; \sum_{i=1}^{k - |V_S|} D_i\right)
+```
 
 where $d_b$ is a **bounded degree** calculated for each vertex $v \in V$ such that
 
-$$d_b(v) = 
-\begin{cases} \min \Big( d_G(v), d_S(v) + k - |V_S| - 1 \Big) & v \notin S \\ 
-\min \Big( d_G(v), d_S(v) + k - |V_S| \Big) & v \in S \end{cases}
-$$
+```math
+d_b(v) = 
+\begin{cases} \min \Big( d_G(v)\,,\; d_S(v) \,+\, k \,-\, |V_S| \,-\, 1 \Big) & v \notin S \\ 
+\min \Big( d_G(v)\,,\; d_S(v) \,+\, k \,-\, |V_S| \Big) & v \in S \end{cases}
+```
 
 Where:  
-- $d_G(v)= \lvert\{u \in V : \{u,v\} \in E\}\lvert$, that is the degree of $v$ in the original graph $G$ 
-- $d_S(v)= \lvert\{u \in V_S: \{u,v\} \in E_S\}\lvert$, that is the degree of $v$ w.r.t. the solution subgraph $S$.
+- $`d_G(v)=\lvert\{u \in V\,:\; \{u,v\} \in E\;\}\lvert`$, that is the degree of $v$ in the original graph $G$ 
+- $`d_S(v)=\lvert\{u \in V_S\,:\; \{u,v\} \in E_S\;\}\lvert`$, that is the degree of $v$ w.r.t. the solution subgraph $S$.
 - $|V_S|$ = number of vertices currently in $S$  
 - $k$ = target subgraph size  
 
