@@ -128,6 +128,8 @@ This problem statement is based upon work from COST Action Randomised
 Optimisation Algorithms Research Network (ROAR-NET), CA22137, is supported by
 COST (European Cooperation in Science and Technology).
 
+This work is funded by national funds through FCT – Foundation for Science and Technology, I.P., within the scope of the research unit UID/00326 - Centre for Informatics and Systems of the University of Coimbra.
+
 ## References
 
 [1] Corneil, D.G., Perl, Y., 1984. Clustering and domination in perfect graphs. *Discrete Applied Mathematics* 9, 27–39. [https://doi.org/10.1016/0166-218X(84)90088-X](https://doi.org/10.1016/0166-218X(84)90088-X)  
