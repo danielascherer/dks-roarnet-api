@@ -101,6 +101,7 @@ This project is licensed under the CC-BY 4.0 license.
 This problem statement is based upon work from COST Action Randomised
 Optimisation Algorithms Research Network (ROAR-NET), CA22137, is supported by
 COST (European Cooperation in Science and Technology).
+This work is funded by national funds through FCT – Foundation for Science and Technology, I.P., within the scope of the research unit UID/00326 - Centre for Informatics and Systems of the University of Coimbra.
 
 
 
